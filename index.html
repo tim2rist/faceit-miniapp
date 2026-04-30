@@ -5,17 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FACEIT Finder AI</title>
-    <!-- Подключаем Tailwind CSS для стиля -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Подключаем Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Иконки -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body {
             background: radial-gradient(circle at top right, #2d1b10, #111111);
-            color: #eeeeee;
-            -webkit-tap-highlight-color: transparent;
+            color: #eee;
         }
 
         .glass-card {
@@ -32,128 +28,109 @@
             background-color: #ff5500;
         }
 
-        @keyframes pulse-orange {
-            0% {
-                box-shadow: 0 0 0 0 rgba(255, 85, 0, 0.4);
-            }
+        @keyframes pulse {
 
-            70% {
-                box-shadow: 0 0 0 10px rgba(255, 85, 0, 0);
-            }
-
+            0%,
             100% {
-                box-shadow: 0 0 0 0 rgba(255, 85, 0, 0);
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
             }
         }
 
-        .ai-pulse {
-            animation: pulse-orange 2s infinite;
+        .loading {
+            animation: pulse 1.5s infinite;
         }
     </style>
 </head>
 
 <body class="min-h-screen p-4 flex flex-col items-center">
 
-    <!-- Header -->
     <div class="w-full max-w-md flex justify-between items-center mb-8 mt-2">
         <div class="flex items-center gap-2">
-            <div
-                class="w-10 h-10 faceit-bg-orange rounded-xl flex items-center justify-center shadow-lg shadow-orange-900/20">
+            <div class="w-10 h-10 faceit-bg-orange rounded-xl flex items-center justify-center shadow-lg">
                 <i data-lucide="crosshair" class="text-white w-6 h-6"></i>
             </div>
-            <div>
-                <h1 class="text-xl font-bold tracking-tight">FACEIT <span class="faceit-orange">FINDER</span></h1>
-                <p class="text-[10px] text-gray-500 uppercase tracking-widest">AI Intelligence System</p>
-            </div>
+            <h1 class="text-xl font-bold">FACEIT <span class="faceit-orange">AI</span></h1>
         </div>
-        <div class="w-10 h-10 rounded-full border border-gray-700 overflow-hidden" id="user-avatar-container">
-            <img id="user-photo" src="https://ui-avatars.com/api/?name=User&background=333&color=fff" alt="avatar">
-        </div>
+        <img id="my-avatar" class="w-10 h-10 rounded-full border border-gray-700"
+            src="https://ui-avatars.com/api/?name=U">
     </div>
 
-    <!-- Главная карточка с игроком (заглушка) -->
-    <div class="w-full max-w-md glass-card rounded-3xl p-6 mb-6 relative overflow-hidden">
-        <div class="absolute top-0 right-0 p-4 opacity-10">
-            <i data-lucide="shield-check" class="w-24 h-24 text-white"></i>
-        </div>
-
+    <div id="main-card" class="w-full max-w-md glass-card rounded-3xl p-6 mb-6 relative">
         <div class="flex items-center gap-4 mb-6">
-            <div class="relative">
-                <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-800 p-[2px]">
-                    <div
-                        class="w-full h-full bg-[#1a1a1a] rounded-2xl flex items-center justify-center overflow-hidden">
-                        <img id="player-img" src="https://avatar.faceit.com/default_avatar.png"
-                            class="w-full h-full object-cover opacity-50">
-                    </div>
-                </div>
-                <div
-                    class="absolute -bottom-2 -right-2 bg-white text-black text-xs font-bold px-2 py-1 rounded-md border-2 border-[#1a1a1a]">
-                    LVL 10
-                </div>
+            <div class="w-20 h-20 rounded-2xl bg-gray-800 overflow-hidden border border-orange-500/30">
+                <img id="p-avatar" src="" class="w-full h-full object-cover">
             </div>
             <div>
-                <h2 id="player-name" class="text-2xl font-black italic uppercase">PLAYER_NAME</h2>
+                <h2 id="p-name" class="text-2xl font-black italic uppercase italic tracking-tighter">Загрузка...</h2>
                 <div class="flex items-center gap-2 text-gray-400 text-sm">
-                    <span id="player-country">🌐 Global</span>
-                    <span class="w-1 h-1 rounded-full bg-gray-600"></span>
-                    <span class="faceit-orange font-mono">2500 ELO</span>
+                    <span id="p-elo" class="faceit-orange font-bold">--- ELO</span>
+                    <span>•</span>
+                    <span id="p-lvl">LVL -</span>
                 </div>
             </div>
         </div>
-
-        <div class="grid grid-cols-3 gap-4">
-            <div class="text-center">
-                <p class="text-[10px] text-gray-500 uppercase mb-1">Матчи</p>
-                <p class="font-bold text-lg leading-none">1,240</p>
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white/5 p-3 rounded-2xl text-center">
+                <p class="text-[10px] text-gray-500 uppercase">Country</p>
+                <p id="p-country" class="font-bold">-</p>
             </div>
-            <div class="text-center border-x border-white/5">
-                <p class="text-[10px] text-gray-500 uppercase mb-1">Win Rate</p>
-                <p class="font-bold text-lg leading-none text-green-400">54%</p>
-            </div>
-            <div class="text-center">
-                <p class="text-[10px] text-gray-500 uppercase mb-1">K/D Ratio</p>
-                <p class="font-bold text-lg leading-none">1.24</p>
+            <div class="bg-white/5 p-3 rounded-2xl text-center">
+                <p class="text-[10px] text-gray-500 uppercase">ID</p>
+                <p id="p-id" class="font-mono text-[10px] truncate">---</p>
             </div>
         </div>
     </div>
 
-    <!-- Блок ИИ Аналитики -->
     <div class="w-full max-w-md glass-card rounded-3xl p-6 mb-6">
-        <div class="flex items-center gap-2 mb-4 text-orange-400">
-            <i data-lucide="cpu" class="w-5 h-5 ai-pulse rounded-full"></i>
-            <h3 class="font-bold uppercase text-sm tracking-wider">AI Тренер Анализ</h3>
+        <div class="flex items-center gap-2 mb-2 text-orange-400">
+            <i data-lucide="cpu" class="w-4 h-4"></i>
+            <h3 class="font-bold uppercase text-xs">AI Инсайт</h3>
         </div>
-        <p id="ai-advice" class="text-gray-300 text-sm leading-relaxed italic">
-            "Твоя статистика на Mirage проседает в защите. ИИ рекомендует чаще использовать флешки на 'A' пленте и
-            сменить позицию в коннекторе."
-        </p>
+        <p id="ai-text" class="text-gray-400 text-sm leading-relaxed">Собираю данные об игроке для анализа...</p>
     </div>
 
-    <!-- Кнопка действия -->
     <button onclick="tg.close()"
-        class="w-full max-w-md faceit-bg-orange hover:bg-orange-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-orange-900/20 transition-transform active:scale-95 uppercase tracking-widest text-sm">
-        Вернуться в чат
+        class="w-full max-w-md faceit-bg-orange text-white font-black py-4 rounded-2xl uppercase tracking-widest text-sm active:scale-95 transition-all">
+        Закрыть
     </button>
 
     <script>
-        // Инициализация Telegram
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.ready();
-
-        // Подгружаем имя пользователя из телеги
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            document.getElementById('user-name-header')?.innerText = tg.initDataUnsafe.user.first_name;
-            if (tg.initDataUnsafe.user.photo_url) {
-                document.getElementById('user-photo').src = tg.initDataUnsafe.user.photo_url;
-            }
-        }
-
-        // Инициализация иконок
         lucide.createIcons();
 
-        // Маленький эффект при нажатии
-        tg.HapticFeedback.impactOccurred('medium');
+        const FACEIT_KEY = "ТВОЙ_FACEIT_API_KEY"; // Обязательно вставь свой ключ!
+        const urlParams = new URLSearchParams(window.location.search);
+        const playerId = urlParams.get('id');
+
+        if (tg.initDataUnsafe?.user?.photo_url) {
+            document.getElementById('my-avatar').src = tg.initDataUnsafe.user.photo_url;
+        }
+
+        async function fetchPlayer() {
+            if (!playerId) return;
+            try {
+                const res = await fetch(`https://open.faceit.com/data/v4/players/${playerId}`, {
+                    headers: { 'Authorization': `Bearer ${FACEIT_KEY}` }
+                });
+                const d = await res.json();
+
+                document.getElementById('p-name').innerText = d.nickname;
+                document.getElementById('p-avatar').src = d.avatar || 'https://avatar.faceit.com/default_avatar.png';
+                document.getElementById('p-elo').innerText = (d.games?.cs2?.faceit_elo || d.games?.csgo?.faceit_elo || '0') + ' ELO';
+                document.getElementById('p-lvl').innerText = 'LVL ' + (d.games?.cs2?.skill_level || d.games?.csgo?.skill_level || '-');
+                document.getElementById('p-country').innerText = d.country ? d.country.toUpperCase() : 'Global';
+                document.getElementById('p-id').innerText = d.player_id;
+                document.getElementById('ai-text').innerText = `Игрок ${d.nickname} найден. Его текущий уровень: ${d.games?.cs2?.skill_level || 'неизвестен'}. ИИ рекомендует проанализировать последние матчи для точного прогноза.`;
+            } catch (e) {
+                document.getElementById('p-name').innerText = "Ошибка API";
+            }
+        }
+        fetchPlayer();
     </script>
 </body>
 
