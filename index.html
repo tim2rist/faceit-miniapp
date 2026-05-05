@@ -11,108 +11,186 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
-            background: radial-gradient(circle at top right, #2d1b10, #111111);
+            /* Черно-серый градиент фона */
+            background: radial-gradient(circle at top right, #1a1a1a, #000000);
             color: #eee;
             font-family: sans-serif;
+            min-height: 100vh;
         }
 
         .glass-card {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.02);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 204, 0, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
 
-        .faceit-orange {
-            color: #ff5500;
+        .theme-yellow {
+            color: #FFCC00;
         }
 
-        .faceit-bg-orange {
-            background-color: #ff5500;
+        .theme-bg-yellow {
+            background-color: #FFCC00;
         }
 
         .stat-value {
-            font-size: 1.25rem;
-            font-weight: 800;
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        /* Анимация загрузки */
+        .loader {
+            border: 3px solid rgba(255, 204, 0, 0.2);
+            border-top: 3px solid #FFCC00;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Скрываем контент до загрузки */
+        #main-content {
+            display: none;
         }
     </style>
 </head>
 
-<body class="min-h-screen p-4 flex flex-col items-center">
+<body class="p-4 flex flex-col items-center">
 
     <!-- Header -->
     <div class="w-full max-w-md flex justify-between items-center mb-6">
         <div class="flex items-center gap-2">
             <div
-                class="w-10 h-10 faceit-bg-orange rounded-xl flex items-center justify-center shadow-lg shadow-orange-900/40">
-                <i data-lucide="zap" class="text-white w-6 h-6"></i>
+                class="w-10 h-10 theme-bg-yellow rounded-xl flex items-center justify-center shadow-lg shadow-yellow-900/40">
+                <i data-lucide="crosshair" class="text-black w-6 h-6"></i>
             </div>
-            <h1 class="text-xl font-black italic tracking-tighter">AI <span class="faceit-orange">STATS</span></h1>
+            <h1 class="text-xl font-black italic tracking-tighter text-white">AI <span class="theme-yellow">STATS</span>
+            </h1>
         </div>
-        <img id="my-avatar" class="w-10 h-10 rounded-full border border-gray-700" src="">
+        <img id="my-avatar" class="w-10 h-10 rounded-full border-2 border-yellow-500/50 hidden" src="">
     </div>
 
-    <!-- Main Player Card -->
-    <div class="w-full max-w-md glass-card rounded-3xl p-6 mb-4">
-        <div class="flex items-center gap-5 mb-6">
-            <div class="relative">
-                <img id="p-avatar" src="" class="w-20 h-20 rounded-2xl object-cover border-2 border-orange-500/50">
-                <div id="p-lvl-badge"
-                    class="absolute -bottom-2 -right-2 bg-white text-black text-xs font-black px-2 py-1 rounded-md border-2 border-black">
-                    LVL -</div>
+    <!-- Экран загрузки -->
+    <div id="loading-screen" class="w-full max-w-md flex flex-col items-center justify-center mt-20">
+        <div class="loader mb-4"></div>
+        <p class="text-yellow-500/70 font-bold animate-pulse text-sm">Синхронизация с FACEIT...</p>
+    </div>
+
+    <!-- Основной контент (скрыт по умолчанию) -->
+    <div id="main-content" class="w-full max-w-md w-full">
+
+        <!-- Player Info Card -->
+        <div class="glass-card rounded-3xl p-6 mb-4 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+
+            <div class="flex items-center gap-5 mb-6 relative z-10">
+                <div class="relative">
+                    <img id="p-avatar" src=""
+                        class="w-20 h-20 rounded-2xl object-cover border-2 border-yellow-500 shadow-lg shadow-yellow-500/20">
+                    <div id="p-lvl-badge"
+                        class="absolute -bottom-2 -right-2 theme-bg-yellow text-black text-xs font-black px-2 py-1 rounded-md border-2 border-black">
+                        LVL -
+                    </div>
+                </div>
+                <div>
+                    <h2 id="p-name" class="text-2xl font-black uppercase tracking-tighter text-white">--</h2>
+                    <div class="flex items-center gap-2 text-gray-400 text-xs font-bold mt-1">
+                        <span id="p-country">🌐</span>
+                        <span>•</span>
+                        <span id="p-elo" class="theme-yellow">-- ELO</span>
+                    </div>
+                </div>
             </div>
-            <div>
-                <h2 id="p-name" class="text-2xl font-black uppercase tracking-tighter">Загрузка...</h2>
-                <div class="flex items-center gap-2 text-gray-400 text-xs">
-                    <span id="p-country">🌐 Global</span>
-                    <span>•</span>
-                    <span id="p-elo" class="faceit-orange font-bold">---- ELO</span>
+
+            <!-- Расширенная сетка статистики -->
+            <div class="grid grid-cols-3 gap-2 mb-2">
+                <div class="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                    <p class="stat-label">K/D Ratio</p>
+                    <p id="p-kd" class="stat-value text-yellow-400">-.--</p>
+                </div>
+                <div class="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                    <p class="stat-label">Win Rate</p>
+                    <p id="p-wr" class="stat-value">--%</p>
+                </div>
+                <div class="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                    <p class="stat-label">Headshots</p>
+                    <p id="p-hs" class="stat-value">--%</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <div class="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                    <p class="stat-label">Matches</p>
+                    <p id="p-matches" class="stat-value text-gray-300">--</p>
+                </div>
+                <div class="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                    <p class="stat-label">Win Streak</p>
+                    <p id="p-streak" class="stat-value text-gray-300">--</p>
+                </div>
+                <div class="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                    <p class="stat-label">Best Map</p>
+                    <p id="p-map" class="stat-value text-gray-300 text-sm truncate">--</p>
                 </div>
             </div>
         </div>
 
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-3 gap-3">
-            <div class="bg-white/5 p-3 rounded-2xl text-center">
-                <p class="text-[9px] text-gray-500 uppercase font-bold">K/D Ratio</p>
-                <p id="p-kd" class="stat-value text-orange-400">-.--</p>
-            </div>
-            <div class="bg-white/5 p-3 rounded-2xl text-center border border-white/5">
-                <p class="text-[9px] text-gray-500 uppercase font-bold">Win Rate</p>
-                <p id="p-wr" class="stat-value text-green-400">--%</p>
-            </div>
-            <div class="bg-white/5 p-3 rounded-2xl text-center">
-                <p class="text-[9px] text-gray-500 uppercase font-bold">Headshots</p>
-                <p id="p-hs" class="stat-value">--%</p>
+        <!-- Recent Results Line (W/L Blocks) -->
+        <div class="glass-card rounded-2xl p-4 mb-4 flex justify-between items-center">
+            <span class="text-xs font-bold text-gray-400 uppercase">Recent Form:</span>
+            <div id="recent-results" class="flex gap-1">
+                <!-- Сюда вставятся W/L бейджи -->
             </div>
         </div>
-    </div>
 
-    <!-- AI Insights Box -->
-    <div class="w-full max-w-md glass-card rounded-3xl p-5 mb-4 border-l-4 border-orange-500">
-        <div class="flex items-center gap-2 mb-2">
-            <i data-lucide="brain-circuit" class="w-4 h-4 text-orange-500"></i>
-            <h3 class="font-black uppercase text-[10px] tracking-widest text-orange-500">AI Coach Verdict</h3>
+        <!-- AI Insights Box -->
+        <div class="glass-card rounded-3xl p-5 mb-4 border-l-4 border-yellow-500">
+            <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="cpu" class="w-4 h-4 theme-yellow"></i>
+                <h3 class="font-black uppercase text-[10px] tracking-widest theme-yellow">Neural Coach Verdict</h3>
+            </div>
+            <p id="ai-text" class="text-gray-300 text-xs leading-relaxed italic">Анализирую паттерны игры...</p>
         </div>
-        <p id="ai-text" class="text-gray-300 text-xs leading-relaxed italic italic">Анализирую твой стиль игры по
-            последним каткам...</p>
-    </div>
 
-    <!-- Chart Placeholder -->
-    <div class="w-full max-w-md glass-card rounded-3xl p-5 mb-6">
-        <canvas id="eloChart" height="150"></canvas>
-    </div>
+        <!-- Chart -->
+        <div class="glass-card rounded-3xl p-5 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Form Trend (Last 5)</h3>
+            </div>
+            <canvas id="formChart" height="120"></canvas>
+        </div>
 
-    <button onclick="tg.close()"
-        class="w-full max-w-md faceit-bg-orange hover:bg-orange-600 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-sm active:scale-95 transition-all shadow-lg shadow-orange-900/30">
-        Вернуться в чат
-    </button>
+        <button onclick="tg.close()"
+            class="w-full theme-bg-yellow hover:bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase tracking-widest text-sm active:scale-95 transition-all shadow-lg shadow-yellow-900/30">
+            Вернуться в чат
+        </button>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
         lucide.createIcons();
 
-        const FACEIT_KEY = "a83d1a7f-f3cf-4df2-949e-ad5d650a7d45"; // <--- ВСТАВЬ СВОЙ КЛЮЧ
+        // ⚠️ ВАЖНО: В продакшене ключи лучше держать на бэкенде
+        const FACEIT_KEY = "a83d1a7f-f3cf-4df2-949e-ad5d650a7d45";
         const urlParams = new URLSearchParams(window.location.search);
         const playerId = urlParams.get('id');
 
@@ -122,62 +200,139 @@
         }
 
         async function fetchAllStats() {
-            if (!playerId) return;
+            if (!playerId) {
+                document.getElementById('loading-screen').innerHTML = "<p class='text-red-500 font-bold'>Ошибка: ID игрока не передан</p>";
+                return;
+            }
+
             try {
-                // 1. Общая инфа
+                // 1. Общая инфа (Имя, Эло, Лвл, Страна)
                 const pRes = await fetch(`https://open.faceit.com/data/v4/players/${playerId}`, {
                     headers: { 'Authorization': `Bearer ${FACEIT_KEY}` }
                 });
                 const pData = await pRes.json();
 
-                // 2. Lifetime Статистика CS2
+                // 2. Детальная статистика CS2 (Lifetime + Карты)
                 const sRes = await fetch(`https://open.faceit.com/data/v4/players/${playerId}/stats/cs2`, {
                     headers: { 'Authorization': `Bearer ${FACEIT_KEY}` }
                 });
                 const sData = await sRes.json();
-                const life = sData.lifetime;
 
-                // Обновляем UI
+                const life = sData.lifetime;
+                const segments = sData.segments; // Статистика по картам
+
+                // Ищем лучшую карту (с наибольшим винрейтом при минимум 10 играх, или просто самую частую)
+                let bestMap = "N/A";
+                if (segments && segments.length > 0) {
+                    const sortedMaps = segments.sort((a, b) => parseInt(b.stats.Matches) - parseInt(a.stats.Matches));
+                    bestMap = sortedMaps[0].label;
+                }
+
+                // Обновляем UI (Базовая инфа)
                 document.getElementById('p-name').innerText = pData.nickname;
-                document.getElementById('p-avatar').src = pData.avatar || 'https://avatar.faceit.com/default_avatar.png';
-                document.getElementById('p-elo').innerText = (pData.games?.cs2?.faceit_elo || '0') + ' ELO';
+                const avatarUrl = pData.avatar || 'https://avatar.faceit.com/default_avatar.png';
+                document.getElementById('p-avatar').src = avatarUrl;
+                document.getElementById('my-avatar').src = avatarUrl;
+                document.getElementById('my-avatar').classList.remove('hidden');
+
+                const elo = pData.games?.cs2?.faceit_elo || '0';
+                document.getElementById('p-elo').innerText = elo + ' ELO';
                 document.getElementById('p-lvl-badge').innerText = 'LVL ' + (pData.games?.cs2?.skill_level || '1');
                 document.getElementById('p-country').innerText = getFlag(pData.country);
 
+                // Обновляем UI (Статистика)
                 document.getElementById('p-kd').innerText = life["Average K/D Ratio"];
                 document.getElementById('p-wr').innerText = life["Win Rate %"] + "%";
                 document.getElementById('p-hs').innerText = life["Average Headshots %"] + "%";
+                document.getElementById('p-matches').innerText = life["Matches"];
+                document.getElementById('p-streak').innerText = life["Current Win Streak"];
+                document.getElementById('p-map').innerText = bestMap;
 
-                // ИИ Анализ (Логика на основе цифр)
+                // Обработка Recent Results (Массив типа ["1", "0", "1", ...])
+                const recentResults = life["Recent Results"] || [];
+                const recentContainer = document.getElementById('recent-results');
+                recentContainer.innerHTML = ''; // Очищаем
+
+                let currentTrend = parseInt(elo); // Базовое эло для графика
+                let graphData = [currentTrend];
+                let labels = ['Start'];
+
+                // Идем с конца массива, чтобы построить график (симуляция изменения формы)
+                const reversedRecent = [...recentResults].reverse();
+
+                reversedRecent.forEach((res, index) => {
+                    // Отрисовка бейджей W/L
+                    const isWin = res === "1";
+                    const span = document.createElement('span');
+                    span.className = `w-6 h-6 flex items-center justify-center text-[10px] font-black rounded ${isWin ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`;
+                    span.innerText = isWin ? 'W' : 'L';
+                    // Добавляем в обычный контейнер (слева направо - от старых к новым)
+                    recentContainer.appendChild(span);
+
+                    // Сбор данных для графика (примерный шаг +/- 25 elo за матч для красивого тренда)
+                    currentTrend += isWin ? 25 : -25;
+                    graphData.push(currentTrend);
+                    labels.push(`M${index + 1}`);
+                });
+
+                // Генерация AI-текста
                 const kd = parseFloat(life["Average K/D Ratio"]);
                 const hs = parseInt(life["Average Headshots %"]);
                 let advice = "";
-                if (kd > 1.2) advice = `Твой K/D (${kd}) выше среднего. Ты жесткий энтри-фрагер. AI рекомендует играть более агрессивно и брать спейс для команды.`;
-                else if (hs > 50) advice = `У тебя мощный процент хэдшотов (${hs}%). Твой аим на высоте, но подтяни позиционку, чтобы не умирать первым.`;
-                else advice = `Статистика стабильная. Сосредоточься на изучении раскидок и командном взаимодействии, чтобы апнуть десятку быстрее.`;
+                if (kd > 1.25) {
+                    advice = `Свирепая статистика. K/D ${kd} показывает, что ты выигрываешь большинство дуэлей. Neural AI советует брать роль плеймейкера.`;
+                } else if (kd < 0.9) {
+                    advice = `Твой K/D (${kd}) проседает. Сфокусируйся на саппорт-ролях, раскидках на ${bestMap} и игре от размена.`;
+                } else if (hs > 55) {
+                    advice = `Аим машина (${hs}% HS). Ты отлично ставишь прицел, но средний K/D говорит о том, что нужно улучшить позиционку.`;
+                } else {
+                    advice = `Стабильный перформанс. Твоя лучшая карта — ${bestMap}. Тренируй префайры и коммуникацию, чтобы пробить плато!`;
+                }
                 document.getElementById('ai-text').innerText = advice;
 
-                // Рисуем фейковый график (для красоты, т.к. история Elo требует много запросов)
-                new Chart(document.getElementById('eloChart'), {
+                // Отрисовка графика тренда (Form Chart)
+                new Chart(document.getElementById('formChart'), {
                     type: 'line',
                     data: {
-                        labels: ['Match 1', 'Match 2', 'Match 3', 'Match 4', 'Match 5'],
+                        labels: labels,
                         datasets: [{
-                            label: 'Elo Trend',
-                            data: [pData.games.cs2.faceit_elo - 40, pData.games.cs2.faceit_elo - 15, pData.games.cs2.faceit_elo - 25, pData.games.cs2.faceit_elo + 10, pData.games.cs2.faceit_elo],
-                            borderColor: '#ff5500',
-                            tension: 0.4,
+                            label: 'Form Trend',
+                            data: graphData,
+                            borderColor: '#FFCC00',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#000',
+                            pointBorderColor: '#FFCC00',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            tension: 0.3,
                             fill: true,
-                            backgroundColor: 'rgba(255, 85, 0, 0.1)'
+                            backgroundColor: 'rgba(255, 204, 0, 0.05)'
                         }]
                     },
-                    options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { display: false } } }
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { display: false }, // Скрываем цифры оси Y для чистоты
+                            x: {
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 9 } }
+                            }
+                        }
+                    }
                 });
+
+                // Скрываем лоадер, показываем контент
+                document.getElementById('loading-screen').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
 
             } catch (e) {
                 console.error(e);
+                document.getElementById('loading-screen').innerHTML = "<p class='text-red-500 font-bold'>Ошибка загрузки данных :(</p>";
             }
         }
+
+        // Запуск
         fetchAllStats();
     </script>
 </body>
