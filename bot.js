@@ -4,13 +4,14 @@ import {
   saveUser,
   getUserByTelegramId,
   saveChat,
-  deleteChat
+  deleteChat,
+  deleteUserByNickname
 } from './database.js';
 import {
   getPlayerProfile,
   getPlayerLast20MatchesStats
 } from './faceitApi.js';
-import { setupCron, getCurrentTop, getSessionSummary } from './cron.js';
+import { setupCron, getCurrentTop, getSessionSummary, triggerDailyBroadcast } from './cron.js';
 
 dotenv.config();
 
@@ -241,6 +242,58 @@ bot.command('yesterday', async (ctx) => {
   } catch (error) {
     console.error('Error in /yesterday command:', error);
     ctx.reply('❌ An error occurred while generating yesterday\'s summary. Please try again.');
+  }
+});
+
+// Helper to verify if sender is an admin (user ID listed in process.env.ADMIN_IDS)
+function isAdmin(ctx) {
+  const adminIdsEnv = process.env.ADMIN_IDS || '';
+  const adminIds = adminIdsEnv.split(',').map(id => id.trim()).filter(Boolean);
+  const senderId = String(ctx.from?.id);
+  return adminIds.includes(senderId);
+}
+
+// /admin_help (Admin Only)
+bot.command('admin_help', async (ctx) => {
+  if (!isAdmin(ctx)) return; // Silently ignore if not admin
+  const helpText = `👑 <b>Admin Commands List:</b>\n` +
+    `┣ <code>/admin_help</code> - Show this list of admin commands\n` +
+    `┣ <code>/force_summary</code> - Manually trigger the daily 23:59 summary broadcast\n` +
+    `┗ <code>/remove_player &lt;nickname&gt;</code> - Delete a player from the SQLite database`;
+  ctx.reply(helpText, { parse_mode: 'HTML' });
+});
+
+// /force_summary (Admin Only)
+bot.command('force_summary', async (ctx) => {
+  if (!isAdmin(ctx)) return;
+  try {
+    await ctx.reply('⏳ Starting manual force summary broadcast to all tracked chats...');
+    const count = await triggerDailyBroadcast(ctx.telegram);
+    await ctx.reply(`✅ Force summary completed. Sent to ${count} chats.`);
+  } catch (err) {
+    console.error('Error in /force_summary:', err);
+    await ctx.reply('❌ Failed to run force summary.');
+  }
+});
+
+// /remove_player <nickname> (Admin Only)
+bot.command('remove_player', async (ctx) => {
+  if (!isAdmin(ctx)) return;
+  const nickname = getCommandArg(ctx.message.text);
+  if (!nickname) {
+    return ctx.reply('❌ Please specify a Faceit nickname.\nExample: <code>/remove_player s1mple</code>', { parse_mode: 'HTML' });
+  }
+
+  try {
+    const deletedCount = deleteUserByNickname(nickname);
+    if (deletedCount > 0) {
+      ctx.reply(`✅ Player <b>${escapeHtml(nickname)}</b> successfully removed from the database.`, { parse_mode: 'HTML' });
+    } else {
+      ctx.reply(`❌ Player <b>${escapeHtml(nickname)}</b> not found in the database.`, { parse_mode: 'HTML' });
+    }
+  } catch (err) {
+    console.error('Error in /remove_player:', err);
+    ctx.reply('❌ Failed to remove player from database.');
   }
 });
 

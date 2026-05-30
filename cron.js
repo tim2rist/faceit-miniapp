@@ -419,6 +419,28 @@ export async function getSessionSummary(telegram, chatId, dayOffset = 1) {
   return formatDailySession(rankedPlayers, titlePrefix, dateStr);
 }
 
+export async function triggerDailyBroadcast(telegram) {
+  console.log("⏰ Starting Daily Session Summary broadcast...");
+  const chats = getAllChats();
+  if (chats.length === 0) {
+    console.log('No tracked chats found in the database. Broadcast skipped.');
+    return 0;
+  }
+
+  let sentCount = 0;
+  for (const chat of chats) {
+    try {
+      const leaderboardMessage = await getSessionSummary(telegram, chat.chat_id, 0);
+      await telegram.sendMessage(chat.chat_id, leaderboardMessage, { parse_mode: 'HTML' });
+      console.log(`Today's summary successfully sent to chat_id: ${chat.chat_id}`);
+      sentCount++;
+    } catch (chatError) {
+      console.error(`Failed to send summary to chat_id ${chat.chat_id}:`, chatError.message);
+    }
+  }
+  return sentCount;
+}
+
 export function setupCron(bot) {
   // 1. Midnight rollover: Runs daily at 00:00 to shift Elo baselines for the new day
   cron.schedule('0 0 * * *', async () => {
@@ -447,25 +469,8 @@ export function setupCron(bot) {
 
   // 2. Today's Summary: Runs daily at 23:59 PM (Reports current day's completed session)
   cron.schedule('59 23 * * *', async () => {
-    console.log("⏰ Starting Today's Session Summary (at 23:59) cron job...");
     try {
-      const chats = getAllChats();
-      if (chats.length === 0) {
-        console.log('No tracked chats found in the database. Cron job skipped.');
-        return;
-      }
-
-      // Broadcast today's summaries per-chat (filters members of each group chat)
-      for (const chat of chats) {
-        try {
-          const leaderboardMessage = await getSessionSummary(bot.telegram, chat.chat_id, 0);
-          await bot.telegram.sendMessage(chat.chat_id, leaderboardMessage, { parse_mode: 'HTML' });
-          console.log(`Today's summary successfully sent to chat_id: ${chat.chat_id}`);
-        } catch (chatError) {
-          console.error(`Failed to send summary to chat_id ${chat.chat_id}:`, chatError.message);
-        }
-      }
-      
+      await triggerDailyBroadcast(bot.telegram);
     } catch (cronError) {
       console.error('Fatal error in daily leaderboard cron job:', cronError);
     }

@@ -88,6 +88,12 @@ export function deleteUser(telegramId) {
   return stmt.run(telegramId);
 }
 
+export function deleteUserByNickname(nickname) {
+  const stmt = db.prepare(`DELETE FROM users WHERE faceit_nickname = ? COLLATE NOCASE`);
+  const result = stmt.run(nickname);
+  return result.changes;
+}
+
 // Chat Track CRUD Helpers
 export function saveChat(chatId) {
   const stmt = db.prepare(`
