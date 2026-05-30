@@ -424,21 +424,30 @@ export async function triggerDailyBroadcast(telegram) {
   const chats = getAllChats();
   if (chats.length === 0) {
     console.log('No tracked chats found in the database. Broadcast skipped.');
-    return 0;
+    return [];
   }
 
-  let sentCount = 0;
+  const successfulChats = [];
   for (const chat of chats) {
     try {
       const leaderboardMessage = await getSessionSummary(telegram, chat.chat_id, 0);
       await telegram.sendMessage(chat.chat_id, leaderboardMessage, { parse_mode: 'HTML' });
       console.log(`Today's summary successfully sent to chat_id: ${chat.chat_id}`);
-      sentCount++;
+      
+      let chatName = `Chat ${chat.chat_id}`;
+      try {
+        const chatInfo = await telegram.getChat(chat.chat_id);
+        chatName = chatInfo.title || `${chatInfo.first_name || ''} ${chatInfo.last_name || ''}`.trim() || `Chat ${chat.chat_id}`;
+      } catch (chatInfoError) {
+        // Fallback if bot is no longer in the chat or getChat fails
+      }
+      
+      successfulChats.push({ id: chat.chat_id, name: chatName });
     } catch (chatError) {
       console.error(`Failed to send summary to chat_id ${chat.chat_id}:`, chatError.message);
     }
   }
-  return sentCount;
+  return successfulChats;
 }
 
 export function setupCron(bot) {

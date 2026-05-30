@@ -268,8 +268,18 @@ bot.command('force_summary', async (ctx) => {
   if (!isAdmin(ctx)) return;
   try {
     await ctx.reply('⏳ Starting manual force summary broadcast to all tracked chats...');
-    const count = await triggerDailyBroadcast(ctx.telegram);
-    await ctx.reply(`✅ Force summary completed. Sent to ${count} chats.`);
+    const successfulChats = await triggerDailyBroadcast(ctx.telegram);
+    
+    if (successfulChats.length === 0) {
+      await ctx.reply('✅ Force summary completed. Sent to 0 chats.');
+      return;
+    }
+
+    let reportMsg = `✅ <b>Force summary completed.</b> Sent to ${successfulChats.length} chats:\n`;
+    successfulChats.forEach(chat => {
+      reportMsg += `• <b>${escapeHtml(chat.name)}</b> (ID: <code>${chat.id}</code>)\n`;
+    });
+    await ctx.reply(reportMsg, { parse_mode: 'HTML' });
   } catch (err) {
     console.error('Error in /force_summary:', err);
     await ctx.reply('❌ Failed to run force summary.');
