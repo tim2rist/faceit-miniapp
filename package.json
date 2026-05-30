@@ -1,0 +1,16 @@
+{
+  "name": "faceit-telegram-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot for tracking CS2 Faceit statistics and daily leaderboards",
+  "main": "bot.js",
+  "type": "module",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3",
+    "telegraf": "^4.16.3"
+  }
+}

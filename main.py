@@ -1,77 +1,98 @@
 import logging
-import aiohttp 
+import aiohttp
+import os
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command, CommandObject 
+from aiogram.filters import Command, CommandObject
 from aiogram.utils.keyboard import InlineKeyboardBuilder
  
 # --- ВСТАВЬ СВОИ ДАННЫЕ ТУТ ---
-BOT_TOKEN = "8623943648:AAFhY9PCeKQ30tugj9_G9bnf6MjJuiolrRg"
-FACEIT_API_KEY = "a83d1a7f-f3cf-4df2-949e-ad5d650a7d45"
+BOT_TOKEN = os.getenv("TELEGRAM_TOKEN", "YOUR_TELEGRAM_TOKEN_HERE")
+FACEIT_API_KEY = os.getenv("FACEIT_API_KEY", "YOUR_FACEIT_API_KEY_HERE")
 MINI_APP_URL = "https://tim2rist.github.io/faceit-miniapp/"
 # ------------------------------
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-@dp.message(Command("start"))
-async def start_cmd(message: types.Message):
-    await message.answer(
-        "👋 **Welcome, Champion!**\n\n"
-        "I'm here to help you analyze your FACEIT performance with AI.\n\n"
-        "⌨️ **Отправь команду /stats <никнейм>** для получения статистики!",
-        parse_mode="Markdown"
-    )
-
 def get_flag_emoji(country_code):
     if not country_code: return "🌐"
     return "".join(chr(127397 + ord(c.upper())) for c in country_code)
 
-# Сделали функцию асинхронной
 async def get_full_stats(nickname):
     headers = {"Authorization": f"Bearer {FACEIT_API_KEY}"}
-    player_url = f"https://open.faceit.com/data/v4/players?nickname={nickname}"
-    
-    # Используем aiohttp для неблокирующих запросов
     async with aiohttp.ClientSession() as session:
+        player_url = f"https://open.faceit.com/data/v4/players?nickname={nickname}"
         async with session.get(player_url, headers=headers) as res_player:
-            if res_player.status != 200: 
+            if res_player.status != 200:
                 return None
             player_data = await res_player.json()
+        
+        player_id = player_data.get("player_id")
+        stats_url = f"https://open.faceit.com/data/v4/players/{player_id}/stats/cs2"
+        async with session.get(stats_url, headers=headers) as res_stats:
+            stats_data = await res_stats.json() if res_stats.status == 200 else {}
 
-    player_id = player_data.get("player_id")
-    elo = player_data.get("games", {}).get("cs2", {}).get("faceit_elo", "N/A")
-    lvl = player_data.get("games", {}).get("cs2", {}).get("skill_level", "N/A")
-
+    lifetime = stats_data.get("lifetime", {})
+    recent_results = [("🟢 W" if r == "1" else "🔴 L") for r in lifetime.get("Recent Results", [])]
+    
     return {
         "nickname": player_data.get("nickname"),
         "flag": get_flag_emoji(player_data.get("country")),
-        "elo": elo,
-        "lvl": lvl,
+        "elo": player_data.get("games", {}).get("cs2", {}).get("faceit_elo", "N/A"),
+        "lvl": player_data.get("games", {}).get("cs2", {}).get("skill_level", "N/A"),
         "avatar": player_data.get("avatar"),
-        "id": player_id
+        "id": player_id,
+        "kd": lifetime.get("Average K/D Ratio", "N/A"),
+        "wr": lifetime.get("Win Rate %", "N/A"),
+        "hs": lifetime.get("Average Headshots %", "N/A"),
+        "matches": lifetime.get("Matches", "N/A"),
+        "recent": " | ".join(recent_results[:5])
     }
 
-# Теперь реагируем ТОЛЬКО на команду /stats (и в личке, и в беседах)
+@dp.message(Command("start"))
+async def start_cmd(message: types.Message):
+    await message.answer(
+        "👋 **Welcome, Champion!**\n\n"
+        "Отправь команду `/stats <никнейм>` для получения подробной аналитики!",
+        parse_mode="Markdown"
+    )
+
 @dp.message(Command("stats"))
 async def show_stats(message: types.Message, command: CommandObject):
-    # Если никнейм не передали (просто написали /stats)
     if not command.args:
-        await message.answer("❌ Пожалуйста, укажите никнейм. Пример: `/stats s1mple`", parse_mode="Markdown")
+        await message.answer("❌ Укажите никнейм. Пример: `/stats s1mple`", parse_mode="Markdown")
         return
 
     nickname = command.args.strip()
-    # Так как функция теперь асинхронная, используем await
     data = await get_full_stats(nickname)
 
     if data:
-        text = (f"{data['flag']} **Игрок: {data['nickname']}**\n"
-                f"📊 Elo: {data['elo']} (Lvl {data['lvl']})")
+        text = (
+            f"👤 **ИГРОК: {data['nickname']}** {data['flag']}\n"
+            f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n"
+            f"📊 **ОСНОВНОЕ**\n"
+            f"┣ 🏆 Уровень: `{data['lvl']}`\n"
+            f"┣ ⚡️ Elo: `{data['elo']}`\n"
+            f"┗ 🎮 Матчей: `{data['matches']}`\n\n"
+            f"📈 **CS2 STATS**\n"
+            f"┣ K/D: `{data['kd']}`\n"
+            f"┣ Winrate: `{data['wr']}%`\n"
+            f"┗ Headshots: `{data['hs']}%`\n\n"
+            f"🕒 **ПОСЛЕДНИЕ ИГРЫ**\n"
+            f"`{data['recent'] if data['recent'] else 'Нет данных'}`\n"
+            f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n"
+            f"🤖 **AI ВЕРДИКТ:**\n"
+            f"_Аналитика доступна в приложении по кнопке ниже._"
+        )
         
         builder = InlineKeyboardBuilder()
-        builder.row(types.InlineKeyboardButton(
-            text="🚀 Открыть AI Аналитику", 
-            web_app=types.WebAppInfo(url=f"{MINI_APP_URL}?id={data['id']}"))
-        )
+        app_url = f"{MINI_APP_URL}?id={data['id']}"
+        
+        if message.chat.type == "private":
+            builder.row(types.InlineKeyboardButton(text="🚀 AI АНАЛИТИКА", web_app=types.WebAppInfo(url=app_url)))
+        else:
+            builder.row(types.InlineKeyboardButton(text="🚀 AI АНАЛИТИКА", url=app_url))
+            builder.row(types.InlineKeyboardButton(text="💬 НАПИСАТЬ В ЛС", url=f"https://t.me/{(await bot.get_me()).username}"))
 
         if data['avatar']:
             await message.answer_photo(data['avatar'], caption=text, parse_mode="Markdown", reply_markup=builder.as_markup())
