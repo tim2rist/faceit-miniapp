@@ -96,6 +96,10 @@ export function deleteUserByNickname(nickname) {
 
 // Chat Track CRUD Helpers
 export function saveChat(chatId) {
+  // Ensure we only save group/supergroup/channel chats (which have negative IDs in Telegram)
+  if (Number(chatId) >= 0) {
+    return { changes: 0 };
+  }
   const stmt = db.prepare(`
     INSERT INTO chats (chat_id)
     VALUES (?)
@@ -105,7 +109,7 @@ export function saveChat(chatId) {
 }
 
 export function getAllChats() {
-  const stmt = db.prepare(`SELECT * FROM chats`);
+  const stmt = db.prepare(`SELECT * FROM chats WHERE chat_id < 0`);
   return stmt.all();
 }
 
